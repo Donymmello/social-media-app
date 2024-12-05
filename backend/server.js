@@ -26,9 +26,14 @@ mongoose.connect('mongodb://localhost:27017/social-app', {
 const userRoutes = require('./routes/userRoutes');
 app.use('/api/users', userRoutes);
 
+const messageRoutes = require('./routes/messageRoutes');
+app.use('/api/messages', messageRoutes);
+
 app.get('/', (req, res) => {
     res.send('Backend is running!');
 });
+
+router.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Configuração do Socket.IO
 io.on('connection', (socket) => {

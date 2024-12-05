@@ -1,11 +1,9 @@
 const mongoose = require('mongoose');
 
 const messageSchema = new mongoose.Schema({
-    sender: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    receiver: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    content: { type: String, required: true },
-    media: { type: String }, // URL do arquivo compartilhado
-    timestamp: { type: Date, default: Date.now },
+    sender: { type: String, required: true }, // ID ou nome do remetente
+    content: { type: String, required: true }, // Conteúdo da mensagem
+    timestamp: { type: Date, default: Date.now }, // Hora da mensagem
 });
 
 module.exports = mongoose.model('Message', messageSchema);
