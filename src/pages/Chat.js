@@ -10,6 +10,7 @@ function ChatPage() {
     const [message, setMessage] = useState('');
     const [messages, setMessages] = useState([]);
     const [file, setFile] = useState(null);
+    const [newMessageId, setNewMessageId] = useState(null); // ID da mensagem mais recente
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -26,6 +27,8 @@ function ChatPage() {
 
         socket.on('receiveMessage', (data) => {
             setMessages((prev) => [...prev, data]);
+            setNewMessageId(data._id); // Marcar a nova mensagem recebida
+            setTimeout(() => setNewMessageId(null), 3000); // Remover destaque após 3 segundos
         });
 
         return () => {
@@ -53,11 +56,13 @@ function ChatPage() {
         if (file) {
             const formData = new FormData();
             formData.append('file', file);
-            formData.append('sender', 'User1');
-
+    
             try {
                 const response = await axios.post('http://localhost:5000/api/messages/upload', formData, {
-                    headers: { 'Content-Type': 'multipart/form-data' },
+                    headers: {
+                        'Content-Type': 'multipart/form-data',
+                        Authorization: `Bearer ${localStorage.getItem('token')}`, // Adiciona o token JWT
+                    },
                 });
                 socket.emit('sendMessage', response.data);
                 setMessages((prev) => [...prev, response.data]);
@@ -89,34 +94,38 @@ function ChatPage() {
                     mb: 2,
                 }}
             >
-                <List>
-                    {messages.map((msg, index) => (
-                        <ListItem key={index}>
-                            {msg.content.startsWith('http') ? (
-                                // Verifica se é uma imagem e renderiza diretamente
-                                msg.content.match(/\.(jpeg|jpg|png|gif)$/i) ? (
-                                    <img
-                                        src={msg.content}
-                                        alt="Uploaded"
-                                        style={{ maxWidth: '100%', maxHeight: '200px', borderRadius: '8px' }}
-                                    />
-                                ) : (
-                                    // Exibe link de download para outros arquivos
-                                    <a
-                                        href={msg.content}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        style={{ textDecoration: 'none', color: '#1976d2' }}
-                                    >
-                                        Download File
-                                    </a>
-                                )
-                            ) : (
-                                <ListItemText primary={`${msg.sender}: ${msg.content}`} />
-                            )}
-                        </ListItem>
-                    ))}
-                </List>
+               <List>
+    {messages.map((msg, index) => (
+        <ListItem key={index}>
+            <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+                    {msg.sender.username || 'Unknown User'} {/* Exibe o nome do usuário remetente */}
+                </Typography>
+                {msg.content.startsWith('http') ? (
+                    msg.content.match(/\.(jpeg|jpg|png|gif)$/i) ? (
+                        <img
+                            src={msg.content}
+                            alt="Uploaded"
+                            style={{ maxWidth: '100%', maxHeight: '200px', borderRadius: '8px' }}
+                        />
+                    ) : (
+                        <a
+                            href={msg.content}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ textDecoration: 'none', color: '#1976d2' }}
+                        >
+                            Download File
+                        </a>
+                    )
+                ) : (
+                    <Typography variant="body1">{msg.content}</Typography>
+                )}
+            </Box>
+        </ListItem>
+    ))}
+</List>
+
             </Paper>
             <Box sx={{ display: 'flex', gap: 2, width: '100%', maxWidth: 600, mb: 2 }}>
                 <TextField

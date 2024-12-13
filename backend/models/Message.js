@@ -1,9 +1,9 @@
 const mongoose = require('mongoose');
 
 const messageSchema = new mongoose.Schema({
-    sender: { type: String, required: true }, // ID ou nome do remetente
-    content: { type: String, required: true }, // Conteúdo da mensagem
-    timestamp: { type: Date, default: Date.now }, // Hora da mensagem
+    sender: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }, // Referência ao modelo de usuário
+    content: { type: String, required: true },
+    timestamp: { type: Date, default: Date.now },
 });
 
 module.exports = mongoose.model('Message', messageSchema);
