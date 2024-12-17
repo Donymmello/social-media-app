@@ -1,7 +1,8 @@
 const mongoose = require('mongoose');
 
 const messageSchema = new mongoose.Schema({
-    sender: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }, // Referência ao modelo de usuário
+    sender: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    group: { type: mongoose.Schema.Types.ObjectId, ref: 'Group', required: true }, // Referência ao grupo
     content: { type: String, required: true },
     timestamp: { type: Date, default: Date.now },
 });

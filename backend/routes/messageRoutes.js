@@ -44,6 +44,36 @@ router.get('/all', async (req, res) => {
     }
 });
 
+router.get('/all', async (req, res) => {
+    try {
+        const { group } = req.query;
+        const filter = group ? { group } : { group: null }; // Filtra por grupo ou mensagens gerais
+        const messages = await Message.find(filter).populate('sender', 'username'); // Popula o campo 'username'
+        res.status(200).json(messages);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+router.post('/save', authMiddleware, async (req, res) => {
+    try {
+        const { content, group } = req.body;
+        const userId = req.user.id; // ID do usuário autenticado
+
+        const message = await Message.create({
+            sender: userId, // Associa o usuário autenticado
+            content,
+            group: group || null, // Grupo opcional
+        });
+
+        const populatedMessage = await message.populate('sender', 'username'); // Popula o nome do remetente
+        res.status(201).json(populatedMessage); // Retorna mensagem completa com o nome do usuário
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
+});
+
+
 // Rota para upload de mídia
 router.post('/upload', authMiddleware, upload.single('file'), async (req, res) => {
     try {

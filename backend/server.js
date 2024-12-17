@@ -5,6 +5,7 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const path = require('path'); // Importação do path para servir arquivos estáticos
 const userRoutes = require('./routes/userRoutes'); // Rotas de usuários
+const groupRoutes = require('./routes/groupRoutes');
 const messageRoutes = require('./routes/messageRoutes'); // Rotas de mensagens
 
 const app = express();
@@ -31,6 +32,7 @@ mongoose
 // Middleware de rotas
 app.use('/api/users', userRoutes);
 app.use('/api/messages', messageRoutes);
+app.use('/api/groups', groupRoutes);
 
 // Servir arquivos estáticos
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
