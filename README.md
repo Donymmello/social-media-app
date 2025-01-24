@@ -1,70 +1,246 @@
-# Getting Started with Create React App
+# Documentação do Aplicativo de Chat
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+## Visão Geral
+Este aplicativo de chat permite comunicação em tempo real entre usuários, com suporte para:
+- Mensagens gerais.
+- Mensagens em grupos.
+- Upload e compartilhamento de mídia (imagens e documentos).
 
-## Available Scripts
+O backend utiliza Node.js com Express e MongoDB, enquanto o frontend é desenvolvido em React com integração via Socket.IO para mensagens em tempo real.
 
-In the project directory, you can run:
+---
 
-### `npm start`
+## Estrutura do Backend
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+### 1. **`server.js`**
+Arquivo principal do backend. Configura o servidor, Socket.IO e rotas principais.
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+#### Principais Funcionalidades:
+- Inicialização do servidor Express.
+- Integração com Socket.IO para mensagens em tempo real.
+- Configuração de middlewares globais (ex.: `cors`, `express.json`).
 
-### `npm test`
+#### Código Simplificado:
+```javascript
+const express = require('express');
+const http = require('http');
+const { Server } = require('socket.io');
+const mongoose = require('mongoose');
+const cors = require('cors');
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+const userRoutes = require('./routes/userRoutes');
+const messageRoutes = require('./routes/messageRoutes');
+const groupRoutes = require('./routes/groupRoutes');
 
-### `npm run build`
+const app = express();
+const server = http.createServer(app);
+const io = new Server(server, {
+    cors: { origin: 'http://localhost:3000', methods: ['GET', 'POST'] },
+});
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+app.use(cors());
+app.use(express.json());
+app.use('/api/users', userRoutes);
+app.use('/api/messages', messageRoutes);
+app.use('/api/groups', groupRoutes);
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+io.on('connection', (socket) => {
+    console.log('User connected:', socket.id);
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+    socket.on('sendMessage', (data) => {
+        io.emit('receiveMessage', data);
+    });
 
-### `npm run eject`
+    socket.on('disconnect', () => {
+        console.log('User disconnected:', socket.id);
+    });
+});
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+mongoose.connect('mongodb://localhost:27017/chat-app', {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+}).then(() => console.log('MongoDB Connected')).catch((err) => console.error(err));
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+const PORT = 5000;
+server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+```
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+---
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+### 2. **Rotas do Backend**
 
-## Learn More
+#### a) **`messageRoutes.js`**
+Responsável por gerenciar mensagens (criação, listagem e upload).
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+##### Principais Endpoints:
+- `GET /all`: Lista todas as mensagens (gerais ou de grupo).
+- `POST /save`: Salva uma mensagem de texto.
+- `POST /upload`: Faz upload de arquivos e salva como mensagens.
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+#### b) **`userRoutes.js`**
+Gerencia usuários, autenticação e registros.
 
-### Code Splitting
+##### Principais Endpoints:
+- `POST /register`: Registra um novo usuário.
+- `POST /login`: Autentica um usuário e retorna um token JWT.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+#### c) **`groupRoutes.js`**
+Gerencia grupos e associação de usuários.
 
-### Analyzing the Bundle Size
+##### Principais Endpoints:
+- `GET /my-groups`: Lista os grupos do usuário.
+- `POST /create`: Cria um novo grupo.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+---
 
-### Making a Progressive Web App
+### 3. **Modelos do MongoDB**
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+#### a) **`Message.js`**
+Modelo de mensagens.
+```javascript
+const mongoose = require('mongoose');
 
-### Advanced Configuration
+const messageSchema = new mongoose.Schema({
+    sender: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    group: { type: mongoose.Schema.Types.ObjectId, ref: 'Group', required: false },
+    content: { type: String, required: true },
+    timestamp: { type: Date, default: Date.now },
+});
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+module.exports = mongoose.model('Message', messageSchema);
+```
 
-### Deployment
+#### b) **`User.js`**
+Modelo de usuários.
+```javascript
+const mongoose = require('mongoose');
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+const userSchema = new mongoose.Schema({
+    username: { type: String, required: true, unique: true },
+    password: { type: String, required: true },
+});
 
-### `npm run build` fails to minify
+module.exports = mongoose.model('User', userSchema);
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+#### c) **`Group.js`**
+Modelo de grupos.
+```javascript
+const mongoose = require('mongoose');
+
+const groupSchema = new mongoose.Schema({
+    name: { type: String, required: true, unique: true },
+    members: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+});
+
+module.exports = mongoose.model('Group', groupSchema);
+```
+
+---
+
+## Estrutura do Frontend
+
+### 1. **Componentes Principais**
+
+#### a) **`ChatPage.js`**
+Componente principal do chat. Gerencia mensagens em tempo real e upload de arquivos.
+
+##### Principais Funcionalidades:
+- Renderiza mensagens gerais ou de grupos.
+- Permite envio de mensagens e upload de arquivos.
+- Integração com Socket.IO para mensagens em tempo real.
+
+##### Código Simplificado:
+```javascript
+import React, { useEffect, useState } from 'react';
+import { io } from 'socket.io-client';
+
+const socket = io('http://localhost:5000');
+
+function ChatPage() {
+    const [messages, setMessages] = useState([]);
+    const [message, setMessage] = useState('');
+
+    useEffect(() => {
+        socket.on('receiveMessage', (data) => {
+            setMessages((prev) => [...prev, data]);
+        });
+
+        return () => socket.off('receiveMessage');
+    }, []);
+
+    const sendMessage = () => {
+        if (message.trim()) {
+            const newMessage = { content: message };
+            socket.emit('sendMessage', newMessage);
+            setMessages((prev) => [...prev, newMessage]);
+            setMessage('');
+        }
+    };
+
+    return (
+        <div>
+            <div>
+                {messages.map((msg, index) => (
+                    <p key={index}>{msg.content}</p>
+                ))}
+            </div>
+            <input
+                type="text"
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+            />
+            <button onClick={sendMessage}>Send</button>
+        </div>
+    );
+}
+
+export default ChatPage;
+```
+
+---
+
+## Dependências
+
+### Backend
+- **Express**: Framework para criar o servidor.
+- **Mongoose**: ODM para interagir com o MongoDB.
+- **Socket.IO**: Comunicação em tempo real.
+- **Multer**: Gerenciamento de uploads de arquivos.
+
+### Frontend
+- **React**: Biblioteca para construção da interface.
+- **Axios**: Para requisições HTTP.
+- **Socket.IO-Client**: Comunicação em tempo real com o backend.
+
+---
+
+## Instruções para Execução
+
+### Backend
+1. Instale as dependências:
+   ```bash
+   npm install
+   ```
+2. Inicie o servidor:
+   ```bash
+   node server.js
+   ```
+
+### Frontend
+1. Instale as dependências:
+   ```bash
+   npm install
+   ```
+2. Inicie o aplicativo React:
+   ```bash
+   npm start
+   ```
+
+---
+
+## Considerações Finais
+- Certifique-se de que o MongoDB está rodando localmente ou em um servidor configurado.
+- Configure variáveis de ambiente (como `JWT_SECRET` e `DB_URI`) no backend para maior segurança.
+- Teste o aplicativo em navegadores diferentes para garantir a funcionalidade em tempo real.
+
